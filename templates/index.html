@@ -1,0 +1,627 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>YoutubeOff — vidéos hors ligne</title>
+<link rel="manifest" href="/static/manifest.json">
+<link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+<meta name="theme-color" content="#0f1115">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --panel2:#1e222b; --border:#2a2f3a;
+    --text:#e8eaef; --muted:#9aa1ad; --accent:#e63946; --accent2:#ff6b6b;
+    --ok:#3ecf8e; --radius:14px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:var(--bg); color:var(--text); font-family:'Segoe UI',system-ui,sans-serif; min-height:100vh;}
+  .wrap{max-width:1100px; margin:0 auto; padding:28px 20px 60px;}
+  header{display:flex; align-items:center; gap:12px; margin-bottom:22px; flex-wrap:wrap;}
+  .logo{width:44px; height:44px; border-radius:12px; background:linear-gradient(135deg,var(--accent),#a4133c);
+        display:flex; align-items:center; justify-content:center; font-size:22px;}
+  h1{font-size:1.5rem;} h1 span{color:var(--accent2);}
+  .sub{color:var(--muted); font-size:.85rem;}
+
+  .card{background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:18px;}
+  .dl-form{display:flex; gap:10px; flex-wrap:wrap;}
+  .dl-form input[type=url]{flex:1 1 260px; background:var(--panel2); border:1px solid var(--border); color:var(--text);
+      padding:12px 14px; border-radius:10px; font-size:.95rem; outline:none;}
+  .dl-form input[type=url]:focus{border-color:var(--accent);}
+  select{background:var(--panel2); border:1px solid var(--border); color:var(--text); padding:12px; border-radius:10px;}
+  button{cursor:pointer; border:none; border-radius:10px; font-size:.95rem;}
+  .btn-dl{background:var(--accent); color:#fff; padding:12px 22px; font-weight:600;}
+  .btn-dl:hover{background:#c92a37;}
+
+  #jobs{margin-top:14px; display:flex; flex-direction:column; gap:8px;}
+  .job{background:var(--panel2); border:1px solid var(--border); border-radius:10px; padding:10px 14px; font-size:.85rem;}
+  .job .bar{height:6px; background:#2a2f3a; border-radius:3px; margin-top:8px; overflow:hidden;}
+  .job .fill{height:100%; background:linear-gradient(90deg,var(--accent),var(--accent2)); width:0%; transition:width .4s;}
+  .job.done .fill{background:var(--ok);}
+  .job.err{border-color:#7f1d1d; color:#fca5a5;}
+
+  h2{margin:30px 0 14px; font-size:1.1rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em;}
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:16px;}
+  .vid{background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden;
+       transition:transform .15s, border-color .15s;}
+  .vid:hover{transform:translateY(-3px); border-color:var(--accent);}
+  .thumb{position:relative; aspect-ratio:16/9; background:#000; cursor:pointer;}
+  .thumb img{width:100%; height:100%; object-fit:cover; display:block;}
+  .thumb .ph{width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:40px; color:#333;}
+  .thumb .dur{position:absolute; bottom:6px; right:6px; background:rgba(0,0,0,.8); padding:2px 6px; border-radius:5px; font-size:.75rem;}
+  .thumb .play{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .15s;}
+  .thumb:hover .play{opacity:1;}
+  .thumb .play div{width:52px; height:52px; border-radius:50%; background:rgba(230,57,70,.92); display:flex; align-items:center; justify-content:center; font-size:20px; color:#fff; padding-left:4px;}
+  .meta{padding:10px 12px 12px;}
+  .meta .t{font-size:.9rem; font-weight:600; line-height:1.3; max-height:2.6em; overflow:hidden;}
+  .meta .u{color:var(--muted); font-size:.78rem; margin-top:4px; display:flex; justify-content:space-between; align-items:center; gap:6px;}
+  .meta .actions{display:flex; gap:2px; align-items:center; flex-shrink:0;}
+  .icon-btn{background:none; color:var(--muted); font-size:.95rem; padding:2px 5px;}
+  .icon-btn:hover{color:var(--accent2);}
+  .icon-btn.saved{color:var(--ok);}
+  .empty{color:var(--muted); text-align:center; padding:40px 0; font-size:.95rem;}
+
+  .lib-tools{display:flex; gap:10px; margin:0 0 14px; flex-wrap:wrap;}
+  .lib-tools input{flex:1 1 200px; background:var(--panel2); border:1px solid var(--border); color:var(--text);
+      padding:10px 12px; border-radius:10px; outline:none; font-size:.9rem;}
+  .lib-tools input:focus{border-color:var(--accent);}
+  .badge-seen{position:absolute; top:6px; right:6px; background:rgba(0,0,0,.75); padding:2px 7px;
+      border-radius:99px; font-size:.7rem; color:var(--muted);}
+  .resumebar{position:absolute; bottom:0; left:0; right:0; height:4px; background:rgba(255,255,255,.15);}
+  .resumebar i{display:block; height:100%; background:var(--accent);}
+  .spd{background:var(--panel2); color:var(--muted); border:1px solid var(--border); padding:6px 10px; font-size:.8rem;}
+  .spd.on{color:#fff; background:var(--accent); border-color:var(--accent);}
+  #storageInfo{color:var(--muted); font-size:.8rem; margin-top:18px;}
+  .offrow{display:flex; align-items:center; gap:6px; margin-top:8px; flex-wrap:wrap;}
+  .btn-off{background:var(--panel2); color:var(--text); border:1px solid var(--accent); padding:7px 10px; font-size:.78rem; border-radius:8px; flex:1;}
+  .btn-off:hover{background:var(--accent); color:#fff;}
+  .btn-off:disabled{opacity:.7; cursor:wait;}
+  .off-ok{color:var(--ok); font-size:.8rem; font-weight:600; flex:1;}
+  .toggle{background:var(--panel2); color:var(--muted); border:1px solid var(--border); padding:10px 14px; font-size:.85rem;}
+  .toggle.on{background:#14351f; color:var(--ok); border-color:#1d5c36;}
+  .toggle:disabled{cursor:default;}
+
+  .badge-dev{position:absolute; top:6px; left:6px; background:rgba(20,53,31,.92); color:var(--ok);
+      border:1px solid #1d5c36; padding:2px 7px; border-radius:99px; font-size:.7rem;}
+
+  /* Bandeau hors ligne */
+  #offlineBanner{display:none; background:#3a2e10; color:#fbbf24; border:1px solid #6b5518;
+      border-radius:10px; padding:10px 14px; margin-bottom:16px; font-size:.85rem;}
+
+  /* Carte "sur ton téléphone" */
+  #phoneCard{display:flex; gap:18px; align-items:center; margin-top:16px; flex-wrap:wrap;}
+  #phoneCard img.qr{width:130px; height:130px; border-radius:10px; background:#fff; padding:6px;}
+  #phoneCard .steps{font-size:.85rem; color:var(--muted); line-height:1.7;}
+  #phoneCard .url{color:var(--text); font-weight:700; font-size:1.05rem;}
+  .btn-ghost{background:var(--panel2); color:var(--muted); border:1px solid var(--border); padding:8px 14px; font-size:.8rem; margin-top:6px;}
+
+  /* Lecteur */
+  #playerOverlay{position:fixed; inset:0; background:rgba(0,0,0,.92); display:none; z-index:50;
+      flex-direction:column; align-items:center; justify-content:center; padding:20px;}
+  #playerOverlay.open{display:flex;}
+  #playerBox{width:min(960px,100%);}
+  #playerTitle{margin-bottom:10px; font-size:1rem; display:flex; justify-content:space-between; gap:10px; align-items:center;}
+  .btn-close{background:var(--panel2); color:var(--text); padding:8px 14px; border:1px solid var(--border);}
+  video, audio{width:100%; max-height:80vh; border-radius:12px; background:#000; outline:none;}
+  .offline-badge{display:inline-flex; align-items:center; gap:6px; background:#14351f; color:var(--ok);
+      border:1px solid #1d5c36; padding:4px 10px; border-radius:99px; font-size:.75rem; margin-left:auto;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">📥</div>
+    <div>
+      <h1>Youtube<span>Off</span></h1>
+      <div class="sub">Télécharge tes vidéos et regarde-les hors ligne</div>
+    </div>
+    <span class="offline-badge" id="statusBadge">● 100% local</span>
+  </header>
+
+  <div id="offlineBanner">✈️ <b>Mode hors ligne</b> — pas de réseau. Tu vois tes vidéos disponibles hors ligne : elles se lisent normalement.</div>
+
+  <div class="card" id="dlCard">
+    <form class="dl-form" id="dlForm">
+      <input type="url" id="url" placeholder="Colle un lien vidéo ou playlist (YouTube, Vimeo, Dailymotion…)" required>
+      <select id="quality">
+        <option value="best">Meilleure qualité</option>
+        <option value="1080">1080p</option>
+        <option value="720">720p</option>
+        <option value="480">480p</option>
+        <option value="audio">Audio seul (MP3)</option>
+      </select>
+      <button class="btn-dl" id="dlBtn" type="submit">Télécharger</button>
+    </form>
+    <div id="jobs"></div>
+  </div>
+
+  <h2>Ma bibliothèque</h2>
+  <div class="lib-tools">
+    <input id="search" type="search" placeholder="🔍 Rechercher un titre, une chaîne…">
+    <select id="sort">
+      <option value="recent">Plus récentes</option>
+      <option value="title">Titre A→Z</option>
+      <option value="duration">Durée</option>
+      <option value="size">Taille</option>
+      <option value="unseen">Non vues d'abord</option>
+    </select>
+    <button class="toggle" id="offToggle" title="N'afficher que ce qui se lit sans réseau">✈️ Hors ligne seulement</button>
+    <button class="btn-dl" id="keepAll" style="display:none; padding:10px 16px; font-size:.85rem">⤓ Tout rendre dispo hors ligne</button>
+  </div>
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty" style="display:none">Aucune vidéo pour l'instant — colle un lien ci-dessus pour commencer 🎬</div>
+  <div id="storageInfo"></div>
+
+  <div class="card" id="phoneCard" style="display:none">
+    <div style="display:flex; gap:14px;">
+      <div style="text-align:center">
+        <img class="qr" id="qrImg" alt="QR code Wi-Fi" src="/api/qr">
+        <div style="font-size:.75rem; color:var(--muted); margin-top:4px">📶 Même Wi-Fi</div>
+      </div>
+      <div style="text-align:center; display:none" id="tsBlock">
+        <img class="qr" id="qrTs" alt="QR code Tailscale" src="/api/qr?which=ts">
+        <div style="font-size:.75rem; color:var(--muted); margin-top:4px">🌍 Partout (Tailscale)</div>
+      </div>
+    </div>
+    <div class="steps">
+      <div>📱 <b style="color:var(--text)">Sur ton téléphone ou ta tablette :</b></div>
+      <div>1. Scanne le QR « 📶 Même Wi-Fi » ou ouvre <span class="url" id="lanUrl">…</span></div>
+      <div id="tsLine" style="display:none">&nbsp;&nbsp;&nbsp;🌍 Avec l'appli <b>Tailscale</b> sur le tel (même compte que le PC), ça marche <b>partout, même en 4G</b> : <span class="url" id="tsUrl"></span></div>
+      <div>2. Menu du navigateur → <b>« Ajouter à l'écran d'accueil »</b> → l'appli s'installe 🎉</div>
+      <div>3. Dans l'appli, colle un lien : la vidéo arrive <b>et devient automatiquement disponible hors ligne</b> dans l'appli.</div>
+      <div>4. Sans aucun réseau, ouvre l'appli : tes vidéos « ✓ Hors ligne » se lisent normalement, dedans. ✈️</div>
+      <div style="margin-top:6px; color:var(--muted)">⚠️ L'adresse Wi-Fi change quand le PC change de réseau — si la page ne répond plus sur le tel, reviens scanner le QR ici. (L'adresse Tailscale, elle, ne change jamais.)</div>
+    </div>
+  </div>
+</div>
+
+<div id="playerOverlay">
+  <div id="playerBox">
+    <div id="playerTitle"><span id="ptText"></span><span id="speeds"></span><button class="btn-close" id="prevBtn" title="Précédente">⏮</button><button class="btn-close" id="nextBtn" title="Suivante">⏭</button><button class="btn-close" onclick="closePlayer()">✕ Fermer</button></div>
+    <div id="playerMount"></div>
+  </div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+let serverOnline = true;
+
+/* ---------- IndexedDB : vidéos enregistrées sur CET appareil ---------- */
+function idb(){
+  return new Promise((res, rej) => {
+    const r = indexedDB.open("youtubeoff", 1);
+    r.onupgradeneeded = () => r.result.createObjectStore("offline", {keyPath:"id"});
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+async function idbPut(obj){ const db = await idb(); return new Promise((res,rej)=>{
+  const tx = db.transaction("offline","readwrite"); tx.objectStore("offline").put(obj);
+  tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); }
+async function idbDel(id){ const db = await idb(); return new Promise((res,rej)=>{
+  const tx = db.transaction("offline","readwrite"); tx.objectStore("offline").delete(id);
+  tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); }
+async function idbAll(){ const db = await idb(); return new Promise((res,rej)=>{
+  const rq = db.transaction("offline").objectStore("offline").getAll();
+  rq.onsuccess = () => res(rq.result || []); rq.onerror = () => rej(rq.error); }); }
+async function idbGet(id){ const db = await idb(); return new Promise((res,rej)=>{
+  const rq = db.transaction("offline").objectStore("offline").get(id);
+  rq.onsuccess = () => res(rq.result || null); rq.onerror = () => rej(rq.error); }); }
+
+/* ---------- Utilitaires ---------- */
+function fmtDur(s){ if(!s) return ""; s=Math.round(s);
+  const h=Math.floor(s/3600), m=Math.floor(s%3600/60), sec=s%60;
+  return (h? h+":"+String(m).padStart(2,"0") : m) + ":" + String(sec).padStart(2,"0"); }
+function fmtSize(b){ if(!b) return ""; const mb=b/1048576; return mb>1024? (mb/1024).toFixed(1)+" Go" : mb.toFixed(0)+" Mo"; }
+function esc(t){ return (t||"").replace(/</g,"&lt;"); }
+
+/* ---------- Bibliothèque ---------- */
+function seen(id){ try{ return !!localStorage.getItem("seen-"+id); }catch(e){ return false; } }
+function savedPos(id){ try{ return parseFloat(localStorage.getItem("pos-"+id)) || 0; }catch(e){ return 0; } }
+
+let lastVids = [], lastSaved = [], visibleVids = [];
+let offlineOnly = false;
+async function loadLibrary(){
+  let vids = [];
+  const saved = await idbAll();
+  try{
+    vids = await (await fetch("/api/videos", {cache:"no-store"})).json();
+    serverOnline = true;
+  }catch(e){
+    serverOnline = false;
+    vids = saved.map(o => o.meta);
+  }
+  lastVids = vids; lastSaved = saved;
+  $("#offlineBanner").style.display = serverOnline ? "none" : "block";
+  $("#dlCard").style.display = serverOnline ? "" : "none";
+  $("#statusBadge").textContent = serverOnline ? "● 100% local" : "📴 hors ligne";
+  renderLibrary();
+  updateStorageInfo();
+}
+
+function renderLibrary(){
+  const saved = lastSaved;
+  const savedIds = new Set(saved.map(o => o.id));
+  const q = ($("#search").value || "").toLowerCase();
+  let vids = lastVids.filter(v => !q
+    || (v.title || "").toLowerCase().includes(q)
+    || (v.uploader || "").toLowerCase().includes(q));
+  // Filtre « hors ligne seulement » (forcé quand le serveur est injoignable)
+  if(offlineOnly || !serverOnline) vids = vids.filter(v => savedIds.has(v.id));
+  const mode = $("#sort").value;
+  if(mode === "title") vids = [...vids].sort((a,b) => (a.title||"").localeCompare(b.title||""));
+  else if(mode === "duration") vids = [...vids].sort((a,b) => (b.duration||0) - (a.duration||0));
+  else if(mode === "size") vids = [...vids].sort((a,b) => (b.size||0) - (a.size||0));
+  else if(mode === "unseen") vids = [...vids].sort((a,b) => (seen(a.id)?1:0) - (seen(b.id)?1:0));
+  visibleVids = vids;  // ordre utilisé par le lecteur pour « suivant / précédent »
+
+  const tg = $("#offToggle");
+  tg.classList.toggle("on", offlineOnly || !serverOnline);
+  tg.disabled = !serverOnline;
+
+  // Bouton « tout rendre dispo hors ligne » : visible quand des vidéos manquent sur cet appareil
+  const missing = lastVids.filter(v => !savedIds.has(v.id));
+  const ka = $("#keepAll");
+  if(ka && !ka.disabled){
+    ka.style.display = (serverOnline && onPhone && missing.length) ? "" : "none";
+    ka.textContent = `⤓ Tout rendre dispo hors ligne (${missing.length})`;
+  }
+
+  const grid = $("#grid"); grid.innerHTML = "";
+  $("#empty").style.display = vids.length ? "none" : "block";
+
+  for(const v of vids){
+    const isSaved = savedIds.has(v.id);
+    const rec = isSaved ? saved.find(o => o.id === v.id) : null;
+    const el = document.createElement("div"); el.className = "vid";
+
+    let thumbHtml;
+    if(serverOnline && v.thumbnail){
+      thumbHtml = `<img src="/media/${encodeURIComponent(v.thumbnail)}" alt="">`;
+    }else if(rec && rec.thumbBlob){
+      thumbHtml = `<img src="${URL.createObjectURL(rec.thumbBlob)}" alt="">`;
+    }else{
+      thumbHtml = `<div class="ph">${v.audio_only ? "🎵" : "🎬"}</div>`;
+    }
+
+    el.innerHTML = `
+      <div class="thumb">
+        ${thumbHtml}
+        ${isSaved ? `<span class="badge-dev">✓ Hors ligne</span>` : ""}
+        ${seen(v.id) ? `<span class="badge-seen">👁 vu</span>` : ""}
+        ${v.duration ? `<span class="dur">${fmtDur(v.duration)}</span>` : ""}
+        ${(savedPos(v.id) > 0 && v.duration) ? `<div class="resumebar"><i style="width:${Math.min(100, savedPos(v.id)/v.duration*100)}%"></i></div>` : ""}
+        <div class="play"><div>▶</div></div>
+      </div>
+      <div class="meta">
+        <div class="t">${esc(v.title)}</div>
+        <div class="u">${esc(v.uploader || v.site || "")} · ${fmtSize(v.size)}</div>
+        <div class="offrow">
+          ${isSaved
+            ? `<span class="off-ok">✓ Disponible hors ligne</span>${serverOnline ? `<button class="icon-btn unsave" title="Retirer de l'appareil">✕</button>` : ""}`
+            : `<button class="btn-off save">⤓ Rendre dispo hors ligne</button>`}
+          ${serverOnline ? `<button class="icon-btn del" title="Supprimer de la bibliothèque">🗑</button>` : ""}
+        </div>
+      </div>`;
+
+    el.querySelector(".thumb").onclick = () => openPlayer(v);
+    const saveBtn = el.querySelector(".save");
+    if(saveBtn) saveBtn.onclick = (e) => { e.stopPropagation(); toggleSaveOffline(v, e.currentTarget); };
+    const unsaveBtn = el.querySelector(".unsave");
+    if(unsaveBtn) unsaveBtn.onclick = async (e) => {
+      e.stopPropagation();
+      if(confirm("Retirer « " + v.title + " » de cet appareil ?\n(elle reste dans la bibliothèque, tu pourras la remettre hors ligne quand tu veux)")){
+        await idbDel(v.id); loadLibrary();
+      }
+    };
+    const delBtn = el.querySelector(".del");
+    if(delBtn) delBtn.onclick = async (e) => {
+      e.stopPropagation();
+      if(confirm("Supprimer définitivement « " + v.title + " » de la bibliothèque ?")){
+        await fetch("/api/videos/" + v.id, {method:"DELETE"});
+        await idbDel(v.id);
+        loadLibrary();
+      }
+    };
+    grid.appendChild(el);
+  }
+}
+
+/* ---------- Enregistrer / retirer une vidéo sur l'appareil ---------- */
+async function saveOffline(v, onProgress){
+  const resp = await fetch("/media/" + encodeURIComponent(v.file));
+  if(!resp.ok) throw new Error("HTTP " + resp.status);
+  const total = Number(resp.headers.get("Content-Length")) || v.size || 0;
+  const reader = resp.body.getReader();
+  const chunks = []; let got = 0;
+  while(true){
+    const {done, value} = await reader.read();
+    if(done) break;
+    chunks.push(value); got += value.length;
+    if(total && onProgress) onProgress(Math.round(got / total * 100));
+  }
+  const videoBlob = new Blob(chunks, {type: v.audio_only ? "audio/mpeg" : "video/mp4"});
+  let thumbBlob = null;
+  if(v.thumbnail){
+    try{ thumbBlob = await (await fetch("/media/" + encodeURIComponent(v.thumbnail))).blob(); }catch(e){}
+  }
+  await idbPut({id: v.id, meta: v, videoBlob, thumbBlob});
+  if(navigator.storage && navigator.storage.persist) navigator.storage.persist();
+}
+
+async function toggleSaveOffline(v, btn){
+  const existing = await idbGet(v.id);
+  if(existing){
+    if(confirm("Retirer « " + v.title + " » de cet appareil ?")){
+      await idbDel(v.id);
+      loadLibrary();
+    }
+    return;
+  }
+  if(!serverOnline){ alert("Le PC n'est pas joignable — impossible de récupérer la vidéo."); return; }
+  btn.disabled = true;
+  try{
+    await saveOffline(v, p => { btn.textContent = p + "%"; });
+  }catch(err){
+    alert("Échec de l'enregistrement : " + err.message);
+  }
+  btn.disabled = false;
+  loadLibrary();
+}
+
+/* ---------- Lecteur ---------- */
+let currentObjectUrl = null;
+async function openPlayer(v){
+  currentVideo = v;
+  if(currentObjectUrl){ URL.revokeObjectURL(currentObjectUrl); currentObjectUrl = null; }
+  $("#ptText").textContent = v.title;
+  const mount = $("#playerMount");
+  const tag = v.audio_only ? "audio" : "video";
+  let src;
+  const rec = await idbGet(v.id);
+  if(rec && rec.videoBlob){
+    currentObjectUrl = URL.createObjectURL(rec.videoBlob);
+    src = currentObjectUrl;
+  }else if(serverOnline){
+    src = "/media/" + encodeURIComponent(v.file);
+  }else{
+    alert("Cette vidéo n'est pas enregistrée sur cet appareil."); return;
+  }
+  mount.innerHTML = `<${tag} src="${src}" controls autoplay playsinline></${tag}>`;
+
+  const media = mount.querySelector("video,audio");
+  media.playbackRate = currentSpeed;
+  // Reprend là où on s'était arrêté
+  const pos = savedPos(v.id);
+  if(pos > 3 && (!v.duration || pos < v.duration - 5)) media.currentTime = pos;
+  let lastSave = 0;
+  media.addEventListener("timeupdate", () => {
+    if(Math.abs(media.currentTime - lastSave) > 5){
+      lastSave = media.currentTime;
+      try{ localStorage.setItem("pos-"+v.id, String(media.currentTime)); }catch(e){}
+    }
+  });
+  media.addEventListener("ended", () => {
+    try{
+      localStorage.setItem("seen-"+v.id, "1");
+      localStorage.removeItem("pos-"+v.id);
+    }catch(e){}
+    playNext();  // lecture continue, comme un vrai lecteur
+  });
+
+  $("#playerOverlay").classList.add("open");
+}
+function closePlayer(){
+  $("#playerMount").innerHTML = "";
+  if(currentObjectUrl){ URL.revokeObjectURL(currentObjectUrl); currentObjectUrl = null; }
+  $("#playerOverlay").classList.remove("open");
+  renderLibrary();  // met à jour les badges « vu » et barres de reprise
+}
+
+/* Vitesse de lecture */
+let currentSpeed = 1;
+const SPEEDS = [1, 1.25, 1.5, 2];
+function renderSpeeds(){
+  $("#speeds").innerHTML = SPEEDS.map(s =>
+    `<button class="spd ${s===currentSpeed ? "on" : ""}" data-s="${s}">${s}×</button>`).join(" ");
+  [...document.querySelectorAll(".spd")].forEach(b => b.onclick = () => {
+    currentSpeed = parseFloat(b.dataset.s);
+    const m = $("#playerMount").querySelector("video,audio");
+    if(m) m.playbackRate = currentSpeed;
+    renderSpeeds();
+  });
+}
+renderSpeeds();
+document.addEventListener("keydown", e => { if(e.key==="Escape") closePlayer(); });
+$("#playerOverlay").addEventListener("click", e => { if(e.target.id==="playerOverlay") closePlayer(); });
+
+/* ---------- Téléchargements ---------- */
+// Sur téléphone/tablette : à la fin du téléchargement, le fichier est proposé
+// automatiquement à l'enregistrement sur l'appareil.
+const onPhone = location.hostname !== "localhost" && location.hostname !== "127.0.0.1";
+const displayJobs = {};          // id -> dernier état connu
+const handledJobs = new Set();   // jobs terminés déjà traités
+
+$("#dlForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const url = $("#url").value.trim();
+  const quality = $("#quality").value;
+  const r = await fetch("/api/download", {method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({url, quality})});
+  const data = await r.json();
+  if(data.error){ alert(data.error); return; }
+  displayJobs[data.job_id] = {status:"démarrage", progress:0, url};
+  $("#url").value = "";
+  renderJobs();
+  pollJobs();
+});
+
+// Mode « Offline Player » : à la fin d'un téléchargement lancé depuis un
+// téléphone/tablette, la ou les vidéos sont enregistrées d'office dans
+// l'appli, sur l'appareil — badge « ✓ sur l'appareil ».
+async function autoKeepOnDevice(jobId, entryIds){
+  const j = displayJobs[jobId];
+  const label = (i, n, p) => "⤓ Mise à dispo hors ligne… " + (n > 1 ? i + "/" + n + " — " : "") + p + "%";
+  try{
+    const vids = await (await fetch("/api/videos", {cache:"no-store"})).json();
+    const targets = vids.filter(x => entryIds.includes(x.id));
+    let done = 0;
+    for(const v of targets){
+      if(!(await idbGet(v.id))){
+        if(j){ j.keepStatus = label(done+1, targets.length, 0); renderJobs(); }
+        await saveOffline(v, p => {
+          if(j){ j.keepStatus = label(done+1, targets.length, p); renderJobs(); }
+        });
+      }
+      done++;
+    }
+    if(j){
+      j.keepStatus = targets.length > 1
+        ? "✓ " + targets.length + " vidéos disponibles hors ligne sur cet appareil"
+        : "✓ Disponible hors ligne sur cet appareil";
+      renderJobs();
+    }
+    loadLibrary();
+  }catch(e){
+    if(j){ j.keepStatus = "⚠ Mise à dispo hors ligne échouée — utilise le bouton « Rendre dispo hors ligne » dans la bibliothèque"; renderJobs(); }
+  }
+}
+
+function renderJobs(){
+  const box = $("#jobs"); box.innerHTML = "";
+  for(const id in displayJobs){
+    const j = displayJobs[id];
+    const div = document.createElement("div");
+    div.className = "job" + (j.status==="terminé" ? " done" : j.status==="erreur" ? " err" : "");
+    const label = j.status==="erreur" ? "❌ Erreur : " + (j.error||"") :
+                  j.status==="terminé" ? "✅ Terminé — " + (j.title||"") :
+                  "⏳ " + j.status.charAt(0).toUpperCase()+j.status.slice(1) + "… " + (j.progress||0) + "%";
+    let html = `<div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
+      <span>${esc(label)} <span style="color:var(--muted)">${j.status==="terminé"||j.status==="erreur" ? "" : esc(j.url||"")}</span></span>`;
+    if(j.status==="terminé" || j.status==="erreur"){
+      html += `<button class="icon-btn dismiss" title="Masquer">✕</button>`;
+    }
+    html += `</div>`;
+    if(j.keepStatus){
+      html += `<div style="margin-top:8px;color:${j.keepStatus.startsWith("✓") ? "var(--ok)" : "var(--muted)"};font-size:.85rem">${esc(j.keepStatus)}</div>`;
+    }
+    if(j.status==="terminé" && j.entry_id && !onPhone && !j.keepStatus){
+      html += `<div style="margin-top:8px"><button class="btn-dl grab" style="padding:8px 16px;font-size:.85rem">⤓ Rendre dispo hors ligne sur cet appareil</button></div>`;
+    }
+    html += `<div class="bar"><div class="fill" style="width:${j.progress||0}%"></div></div>`;
+    div.innerHTML = html;
+    const dis = div.querySelector(".dismiss");
+    if(dis) dis.onclick = () => { delete displayJobs[id]; renderJobs(); };
+    const grab = div.querySelector(".grab");
+    if(grab) grab.onclick = () => autoKeepOnDevice(id, j.entry_ids || [j.entry_id]);
+    box.appendChild(div);
+  }
+}
+
+let polling = false;
+async function pollJobs(){
+  if(polling) return; polling = true;
+  const active = () => Object.values(displayJobs).some(j => j.status!=="terminé" && j.status!=="erreur");
+  while(active()){
+    await new Promise(r=>setTimeout(r, 1000));
+    let all = {};
+    try{ all = await (await fetch("/api/jobs")).json(); }catch(e){ break; }
+    for(const id in displayJobs){
+      if(all[id]) displayJobs[id] = Object.assign({}, all[id], {keepStatus: displayJobs[id].keepStatus});
+    }
+    renderJobs();
+    for(const id in displayJobs){
+      const j = displayJobs[id];
+      if(j.status==="terminé" && !handledJobs.has(id)){
+        handledJobs.add(id);
+        loadLibrary();
+        // Sur téléphone : la ou les vidéos sont enregistrées d'office dans l'appli
+        if(onPhone && (j.entry_ids || j.entry_id)) autoKeepOnDevice(id, j.entry_ids || [j.entry_id]);
+      }
+    }
+  }
+  polling = false;
+}
+
+/* ---------- Jauge de stockage ---------- */
+async function updateStorageInfo(){
+  const el = $("#storageInfo");
+  try{
+    const n = lastSaved.length;
+    const bytes = lastSaved.reduce((s,o) => s + (o.videoBlob ? o.videoBlob.size : 0), 0);
+    if(n === 0){ el.textContent = ""; return; }
+    let txt = `💾 ${n} vidéo${n>1?"s":""} enregistrée${n>1?"s":""} sur cet appareil (${fmtSize(bytes)})`;
+    if(navigator.storage && navigator.storage.estimate){
+      const est = await navigator.storage.estimate();
+      if(est && est.quota) txt += ` — espace restant : ${fmtSize(est.quota - est.usage)}`;
+    }
+    el.textContent = txt;
+  }catch(e){ el.textContent = ""; }
+}
+
+/* ---------- Recherche & tri ---------- */
+$("#search").addEventListener("input", renderLibrary);
+$("#sort").addEventListener("change", renderLibrary);
+
+/* ---------- Tout garder sur cet appareil ---------- */
+$("#keepAll").addEventListener("click", async () => {
+  const btn = $("#keepAll");
+  const saved = new Set(lastSaved.map(o => o.id));
+  const missing = lastVids.filter(v => !saved.has(v.id));
+  if(!missing.length) return;
+  btn.disabled = true;
+  let i = 0, fails = 0;
+  for(const v of missing){
+    i++;
+    try{
+      await saveOffline(v, p => { btn.textContent = `⤓ ${i}/${missing.length} — ${p}%`; });
+    }catch(e){ fails++; }
+  }
+  btn.disabled = false;
+  if(fails) alert(fails + " vidéo(s) n'ont pas pu être copiées — réessaie.");
+  await loadLibrary();
+});
+
+/* ---------- Filtre hors ligne + stockage persistant ---------- */
+$("#offToggle").addEventListener("click", () => { offlineOnly = !offlineOnly; renderLibrary(); });
+// Demande au téléphone de ne jamais effacer les vidéos gardées dans l'appli
+if(navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+
+/* ---------- Lecture continue : suivant / précédent ---------- */
+let currentVideo = null;
+function playNext(){
+  const i = visibleVids.findIndex(x => x.id === (currentVideo || {}).id);
+  if(i >= 0 && i + 1 < visibleVids.length) openPlayer(visibleVids[i + 1]);
+}
+function playPrev(){
+  const i = visibleVids.findIndex(x => x.id === (currentVideo || {}).id);
+  if(i > 0) openPlayer(visibleVids[i - 1]);
+}
+$("#nextBtn").onclick = playNext;
+$("#prevBtn").onclick = playPrev;
+
+/* ---------- PWA + carte téléphone ---------- */
+if("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");
+
+async function initPhoneCard(){
+  try{
+    const info = await (await fetch("/api/info")).json();
+    const isPhoneItself = location.hostname !== "localhost" && location.hostname !== "127.0.0.1";
+    if(!isPhoneItself){
+      $("#lanUrl").textContent = `http://${info.ip}:${info.port}`;
+      if(info.ts_url){
+        $("#tsUrl").textContent = info.ts_url;
+        $("#tsBlock").style.display = "";
+        $("#tsLine").style.display = "";
+      }
+      $("#phoneCard").style.display = "flex";
+    }
+  }catch(e){ /* hors ligne : pas de carte */ }
+}
+
+loadLibrary();
+initPhoneCard();
+</script>
+</body>
+</html>

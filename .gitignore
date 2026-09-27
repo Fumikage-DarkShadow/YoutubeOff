@@ -1,0 +1,22 @@
+# Vidéos téléchargées et bibliothèque locale (jamais publiées)
+videos/
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# Réglages locaux de Claude Code (propres à cette machine)
+.claude/settings.local.json
+
+# Système / éditeurs
+.DS_Store
+Thumbs.db
+*.swp
+
+# Xcode / iOS
+ios/**/xcuserdata/
+ios/**/*.xcworkspace/xcuserdata/
+ios/**/DerivedData/
+ios/**/build/
